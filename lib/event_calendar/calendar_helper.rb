@@ -199,7 +199,7 @@ module EventCalendar
 
             else
               # there wasn't an event, so create an empty article
-              cal << %(<article class="event">)
+              cal << %(<article class="no-events">)
               cal << %(&nbsp;</article>)
             end
             cal << %(</article>)
