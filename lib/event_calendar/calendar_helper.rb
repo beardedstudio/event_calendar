@@ -114,35 +114,26 @@ module EventCalendar
       cal = ""
 
       # outer calendar container
-      cal << %(<div class="ec-calendar">)
+      cal << %(<div class="calendar">)
 
       # table header, including the monthname and links to prev & next month
       if options[:show_header]
-        cal << %(<div class="ec-calendar-header">)
+        cal << %(<header>)
+
         if options[:previous_month_text]
-          cal << %(<span class="ec-month-nav ec-previous-month">#{options[:previous_month_text]}</span>)
+          cal << %(<span class="month-nav previous-month-nav">#{options[:previous_month_text]}</span>)
         end
+
+        cal << %(<h1 class="month-name">#{options[:month_name_text]}</h1>)
+
         if options[:next_month_text]
-          cal << %(<span class="ec-month-nav ec-next-month">#{options[:next_month_text]}</span>)
+          cal << %(<span class="month-nav next-month-nav">#{options[:next_month_text]}</span>)
         end
-        cal << %(<div class="ec-month-name">#{options[:month_name_text]}</div>)
-        cal << %(</div>)
+        cal << %(</header>)
       end
 
       # body container (holds day names and the calendar rows)
-      cal << %(<div class="ec-body" style="height: #{height}px;">)
-
-      # day names
-      cal << %(<table class="ec-day-names" style="height: #{options[:day_names_height]}px;" cellpadding="0" cellspacing="0">)
-      cal << %(<tbody><tr>)
-      day_names.each do |day_name|
-        cal << %(<th class="ec-day-name" title="#{day_name}">#{day_name}</th>)
-      end
-      cal << %(</tr></tbody></table>)
-
-      # container for all the calendar rows
-      cal << %(<div class="ec-rows" style="top: #{options[:day_names_height]}px; )
-      cal << %(height: #{height - options[:day_names_height]}px;">)
+      cal << %(<div class="events">)
 
       # initialize loop variables
       first_day_of_week = beginning_of_week(first, options[:first_day_of_week])
@@ -153,47 +144,24 @@ module EventCalendar
 
       # go through a week at a time, until we reach the end of the month
       while(last_day_of_week <= last_day_of_cal)
-        cal << %(<div class="ec-row" style="top: #{top}px; height: #{row_heights[row_num]}px;">)
-        top += row_heights[row_num]
-
-        # this weeks background table
-        cal << %(<table class="ec-row-bg" cellpadding="0" cellspacing="0">)
-        cal << %(<tbody><tr>)
-        first_day_of_week.upto(first_day_of_week+6) do |day|
-          today_class = (day == Date.current) ? "ec-today-bg" : ""
-          other_month_class = (day < first) || (day > last) ? 'ec-other-month-bg' : ''
-          cal << %(<td class="ec-day-bg #{today_class} #{other_month_class}">&nbsp;</td>)
-        end
-        cal << %(</tr></tbody></table>)
-
-        # calendar row
-        cal << %(<table class="ec-row-table" cellpadding="0" cellspacing="0">)
-        cal << %(<tbody>)
-
-        # day numbers row
-        cal << %(<tr>)
-        first_day_of_week.upto(last_day_of_week) do |day|
-          cal << %(<td class="ec-day-header )
-          cal << %(ec-today-header ) if options[:show_today] and (day == Date.current)
-          cal << %(ec-other-month-header ) if (day < first) || (day > last)
-          cal << %(ec-weekend-day-header) if weekend?(day)
-          cal << %(" style="height: #{options[:day_nums_height]}px;">)
-          if options[:link_to_day_action]
-            cal << day_link(day.day, day, options[:link_to_day_action])
-          else
-            cal << %(#{day.day})
-          end
-          cal << %(</td>)
-        end
-        cal << %(</tr>)
 
         # event rows for this day
         # for each event strip, create a new table row
         options[:event_strips].each do |strip|
-          cal << %(<tr>)
           # go through through the strip, for the entries that correspond to the days of this week
           strip[row_num*7, 7].each_with_index do |event, index|
             day = first_day_of_week + index
+
+            cal << %(<article class="#{classes_for_day(day)}">)
+
+            cal << %(<header class="date">)
+
+            if options[:link_to_day_action]
+              cal << day_link(day.day, day, options[:link_to_day_action])
+            else
+              cal << %(#{day.day} <span class='dayname'>#{Date::ABBR_DAYNAMES[day.wday]}</span>)
+            end
+            cal << %(</header>)
 
             if event
               # get the dates of this event that fit into this week
@@ -202,25 +170,10 @@ module EventCalendar
               # then create a new cell that spans the number of days
               if dates[0] == day.to_date
                 # check if we should display the bg color or not
-                no_bg = no_event_bg?(event, options)
+
                 class_name = event.class.name.tableize.singularize
-
-                cal << %(<td class="ec-event-cell" colspan="#{(dates[1]-dates[0]).to_i + 1}" )
-                cal << %(style="padding-top: #{options[:event_margin]}px;">)
-                cal << %(<div id="ec-#{class_name}-#{event.id}" class="ec-event )
-                if class_name != "event"
-                  cal << %(ec-#{class_name} )
-                end
-                if no_bg
-                  cal << %(ec-event-no-bg" )
-                  cal << %(style="color: #{event.color}; )
-                else
-                  cal << %(ec-event-bg" )
-                  cal << %(style="background-color: #{event.color}; )
-                end
-
-                cal << %(padding-top: #{options[:event_padding_top]}px; )
-                cal << %(height: #{options[:event_height] - options[:event_padding_top]}px;" )
+                cal << %(<article id="#{class_name}-#{event.id}" class="event" )
+                
                 if options[:use_javascript]
                   # custom attributes needed for javascript event highlighting
                   cal << %(data-event-id="#{event.id}" data-event-class="#{class_name}" data-color="#{event.color}" )
@@ -228,21 +181,11 @@ module EventCalendar
                 cal << %(>)
 
                 # add a left arrow if event is clipped at the beginning
-                if event.start_at.to_date < dates[0]
-                  cal << %(<div class="ec-left-arrow"></div>)
-                end
+                cal << %(<div class="ec-left-arrow"></div>) if event.start_at.to_date < dates[0]
+
                 # add a right arrow if event is clipped at the end
-                if event.end_at.to_date > dates[1]
-                  cal << %(<div class="ec-right-arrow"></div>)
-                end
-
-                if no_bg
-                  cal << %(<div class="ec-bullet" style="background-color: #{event.color};"></div>)
-                  # make sure anchor text is the event color
-                  # here b/c CSS 'inherit' color doesn't work in all browsers
-                  cal << %(<style type="text/css">.ec-#{class_name}-#{event.id} a { color: #{event.color}; }</style>)
-                end
-
+                cal << %(<div class="ec-right-arrow"></div>) if event.end_at.to_date > dates[1]
+              
                 if block_given?
                   # add the additional html that was passed as a block to this helper
                   cal << block.call({:event => event, :day => day.to_date, :options => options})
@@ -251,25 +194,17 @@ module EventCalendar
                   cal << %(<a href="/#{class_name.pluralize}/#{event.id}" title="#{h(event.name)}">#{h(event.name)}</a>)
                 end
 
-                cal << %(</div></td>)
+                cal << %(</article>)
               end
 
             else
-              # there wasn't an event, so create an empty cell and container
-              cal << %(<td class="ec-event-cell ec-no-event-cell" )
-              cal << %(style="padding-top: #{options[:event_margin]}px;">)
-              cal << %(<div class="ec-event" )
-              cal << %(style="padding-top: #{options[:event_padding_top]}px; )
-              cal << %(height: #{options[:event_height] - options[:event_padding_top]}px;" )
-              cal << %(>)
-              cal << %(&nbsp;</div></td>)
+              # there wasn't an event, so create an empty article
+              cal << %(<article class="event">)
+              cal << %(&nbsp;</article>)
             end
+            cal << %(</article>)
           end
-          cal << %(</tr>)
         end
-
-        cal << %(</tbody></table>)
-        cal << %(</div>)
 
         # increment the calendar row we are on, and the week
         row_num += 1
@@ -278,9 +213,23 @@ module EventCalendar
       end
 
       cal << %(</div>)
-      cal << %(</div>)
-      cal << %(</div>)
     end
+
+    # Determine classes for each day in the cal (today, prev month, nextmonth)
+    def classes_for_day(day)
+      day_class = 'day'
+      if day == Date.current
+        day_class << ' today'
+      elsif day < Date.current
+        day_class << ' past' 
+        day_class << ' prev-month' unless day.month == Date.current.month
+      elsif day.month != Date.current.month
+        day_class << ' next-month'
+      end
+
+      day_class
+    end
+
 
     # override this in your own helper for greater control
     def day_link(text, date, day_action)
