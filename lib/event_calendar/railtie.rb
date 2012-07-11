@@ -6,6 +6,14 @@ module EventCalendar
   class Railtie < Rails::Engine
     config.event_calendar = ActiveSupport::OrderedOptions.new
 
+    if defined?(ActionController::Base)
+      ActionController::Base.helper EventCalendar::CalendarHelper
+    end
+
+    if defined?(ActiveRecord::Base)
+      ActiveRecord::Base.extend EventCalendar::ClassMethods
+    end
+
     initializer "event_calendar.configure" do |app|
       EventCalendar.configure do |config|
         config.color_theme = app.config.event_calendar[:color_theme] || "default"
@@ -16,14 +24,6 @@ module EventCalendar
       end
     end
 
-    initializer :after_initialize do
-      if defined?(ActionController::Base)
-        ActionController::Base.helper EventCalendar::CalendarHelper
-      end
-      if defined?(ActiveRecord::Base)
-        ActiveRecord::Base.extend EventCalendar::ClassMethods
-      end
-    end
   end
 end
 
